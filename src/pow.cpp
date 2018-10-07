@@ -5,7 +5,6 @@
 
 #include "pow.h"
 
-#include "hashblock.h"
 #include "chain.h"
 #include "chainparams.h"
 #include "main.h"
@@ -17,7 +16,7 @@
 
 unsigned int static DarkGravityWave(const CBlockIndex* pindexLast) 
 {
-    /* current difficulty formula, dixicoin - DarkGravity v3, written by Evan Duffield - evan@dashpay.io */
+    /* current difficulty formula, zyte - DarkGravity v3, written by Evan Duffield - evan@dashpay.io */
     const CBlockIndex* BlockLastSolved = pindexLast;
     const CBlockIndex* BlockReading = pindexLast;
     int64_t nActualTimespan = 0;
@@ -31,15 +30,11 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
     if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 || BlockLastSolved->nHeight < PastBlocksMin) {
         return Params().ProofOfWorkLimit().GetCompact();
     }
-	
-	if (pindexLast->nHeight >= 159670 && pindexLast->nHeight <= 159699) {
-        return Params().ProofOfWorkLimit().GetCompact();
-	}
 
     if (pindexLast->nHeight > Params().LAST_POW_BLOCK()) {
         uint256 bnTargetLimit = (~uint256(0) >> 24);
-        int64_t nTargetSpacing = 60;
-        int64_t nTargetTimespan = 60 * 40;
+        int64_t nTargetSpacing = 120;
+        int64_t nTargetTimespan = 120 * 24; //2880
 
         int64_t nActualSpacing = 0;
         if (pindexLast->nHeight != 0)
@@ -93,7 +88,7 @@ unsigned int static DarkGravityWave(const CBlockIndex* pindexLast)
 
     uint256 bnNew(PastDifficultyAverage);
 
-    int64_t _nTargetTimespan = CountBlocks * Params().TargetSpacing();
+    int64_t _nTargetTimespan = CountBlocks * (pindexLast->nHeight > 499 ? Params().TargetSpacing() : Params().TargetSpacingSlowLaunch());
 
     if (nActualTimespan < _nTargetTimespan / 3)
         nActualTimespan = _nTargetTimespan / 3;
@@ -116,7 +111,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 	return DarkGravityWave(pindexLast);
 }
 
-bool CheckProofOfWork(uint256 Hash9, unsigned int nBits)
+bool CheckProofOfWork(uint256 hash, unsigned int nBits)
 {
     bool fNegative;
     bool fOverflow;
@@ -132,8 +127,8 @@ bool CheckProofOfWork(uint256 Hash9, unsigned int nBits)
         return error("CheckProofOfWork() : nBits below minimum work");
 
     // Check proof of work matches claimed amount
-    //if (Hash9 > bnTarget)
-     //   return error("CheckProofOfWork() : hash doesn't match nBits");
+    if (hash > bnTarget)
+        return error("CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
 }

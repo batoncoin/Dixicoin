@@ -64,15 +64,15 @@ bin_PROGRAMS =
 TESTS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += dixicoind
+  bin_PROGRAMS += zyted
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += dixicoin-cli dixicoin-tx
+  bin_PROGRAMS += zyte-cli zyte-tx
 endif
 
 .PHONY: FORCE
-# dixicoin core #
+# zyte core #
 BITCOIN_CORE_H = \
   activemasternode.h \
   addrman.h \
@@ -102,7 +102,8 @@ BITCOIN_CORE_H = \
   obfuscation-relay.h \
   db.h \
   eccryptoverify.h \
-  ecwrapper.h \  
+  ecwrapper.h \
+  hash.h \
   init.h \
   kernel.h \
   swifttx.h \
@@ -179,8 +180,8 @@ obj/build.h: FORCE
 	  $(abs_top_srcdir)
 libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between dixicoind and dixicoin-qt
-libbitcoin_server_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS)
+# server: shared between zyted and zyte-qt
+libbitcoin_server_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   alert.cpp \
@@ -223,7 +224,7 @@ libbitcoin_zmq_a_SOURCES = \
   zmq/zmqpublishnotifier.cpp
 endif
 
-# wallet: shared between dixicoind and dixicoin-qt, but only linked
+# wallet: shared between zyted and zyte-qt, but only linked
 # when wallet enabled
 
 libbitcoin_wallet_a_CFLAGS = -fPIC
@@ -254,48 +255,43 @@ libbitcoin_wallet_a_SOURCES = \
 crypto_libbitcoin_crypto_a_CFLAGS = -fPIC
 crypto_libbitcoin_crypto_a_CPPFLAGS = $(BITCOIN_CONFIG_INCLUDES)
 crypto_libbitcoin_crypto_a_SOURCES = \
-  crypto/common.h \
-  crypto/scrypt.cpp \
-  crypto/scrypt.h \
-  crypto/hmac_sha256.cpp \  
-  crypto/hmac_sha256.h \
-  crypto/hmac_sha512.cpp \
-  crypto/hmac_sha512.h \
+  crypto/sha1.cpp \
+  crypto/sha256.cpp \
+  crypto/sha512.cpp \
+  crypto/hmac_sha256.cpp \
   crypto/rfc6979_hmac_sha256.cpp \
-  crypto/rfc6979_hmac_sha256.h \
+  crypto/hmac_sha512.cpp \
+  crypto/scrypt.cpp \
   crypto/ripemd160.cpp \
   crypto/aes_helper.c \
   crypto/blake.c \
-  crypto/bmw.c \
   crypto/cubehash.c \
   crypto/echo.c \
+  crypto/fugue.c \
+  crypto/gost.c \
   crypto/groestl.c \
   crypto/jh.c \
   crypto/keccak.c \
-  crypto/luffa.c \
-  crypto/shavite.c \
-  crypto/simd.c \
   crypto/skein.c \
-  crypto/ripemd160.h \
-  crypto/sha1.cpp \
-  crypto/sha1.h \
-  crypto/sha256.cpp \
+  crypto/common.h \
   crypto/sha256.h \
   crypto/sha512.h \
+  crypto/hmac_sha256.h \
+  crypto/rfc6979_hmac_sha256.h \
+  crypto/hmac_sha512.h \
+  crypto/scrypt.h \
+  crypto/sha1.h \
+  crypto/ripemd160.h \
   crypto/sph_blake.h \
-  crypto/sph_bmw.h \
   crypto/sph_cubehash.h \
   crypto/sph_echo.h \
+  crypto/sph_fugue.h \
+  crypto/sph_gost.h \
   crypto/sph_groestl.h \
   crypto/sph_jh.h \
   crypto/sph_keccak.h \
-  crypto/sph_luffa.h \
-  crypto/sph_shavite.h \
-  crypto/sph_simd.h \
   crypto/sph_skein.h \
-  crypto/sph_types.h \
-  crypto/sha512.cpp \
-  crypto/sha512.h
+  crypto/sph_types.h
 
 # univalue JSON library
 univalue_libbitcoin_univalue_a_SOURCES = \
@@ -305,7 +301,7 @@ univalue_libbitcoin_univalue_a_SOURCES = \
   univalue/univalue_escapes.h \
   univalue/univalue.h
 
-# common: shared between dixicoind, and dixicoin-qt and non-server tools
+# common: shared between zyted, and zyte-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_common_a_SOURCES = \
   allocators.cpp \
@@ -361,7 +357,7 @@ libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
 libbitcoin_util_a_SOURCES += compat/glibcxx_compat.cpp
 endif
 
-# cli: shared between dixicoin-cli and dixicoin-qt
+# cli: shared between zyte-cli and zyte-qt
 libbitcoin_cli_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_cli_a_SOURCES = \
   rpcclient.cpp \
@@ -371,7 +367,7 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind binary #
-dixicoind_LDADD = \
+zyted_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UNIVALUE) \
@@ -382,40 +378,41 @@ dixicoind_LDADD = \
   $(LIBSECP256K1)
 
 if ENABLE_ZMQ
-dixicoind_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
+zyted_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
 endif
 
 if ENABLE_WALLET
-dixicoind_LDADD += libbitcoin_wallet.a
+zyted_LDADD += libbitcoin_wallet.a
 endif
-dixicoind_SOURCES = dixicoind.cpp
+zyted_SOURCES = zyted.cpp
 #
 
 if TARGET_WINDOWS
-dixicoind_SOURCES += dixicoind-res.rc
+zyted_SOURCES += zyted-res.rc
 endif
 
-dixicoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS)
-dixicoind_CPPFLAGS = $(BITCOIN_INCLUDES)
-dixicoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+zyted_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
+zyted_CPPFLAGS = $(BITCOIN_INCLUDES)
+zyted_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 
-# dixicoin-cli binary #
-dixicoin_cli_LDADD = \
+# zyte-cli binary #
+zyte_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBBITCOIN_UTIL) \
   $(BOOST_LIBS) \
   $(SSL_LIBS) \
-  $(CRYPTO_LIBS)
+  $(CRYPTO_LIBS) \
+  $(EVENT_LIBS)
 
-dixicoin_cli_SOURCES = \
-  dixicoin-cli.cpp
+zyte_cli_SOURCES = \
+  zyte-cli.cpp
 
-dixicoin_cli_CPPFLAGS = $(BITCOIN_INCLUDES)
+zyte_cli_CPPFLAGS = $(BITCOIN_INCLUDES)
 #
 
-# dixicoin-tx binary #
-dixicoin_tx_LDADD = \
+# zyte-tx binary #
+zyte_tx_LDADD = \
   $(LIBBITCOIN_UNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -424,15 +421,15 @@ dixicoin_tx_LDADD = \
   $(BOOST_LIBS) \
   $(CRYPTO_LIBS)
 
-dixicoin_tx_SOURCES = dixicoin-tx.cpp
-dixicoin_tx_CPPFLAGS = $(BITCOIN_INCLUDES)
+zyte_tx_SOURCES = zyte-tx.cpp
+zyte_tx_CPPFLAGS = $(BITCOIN_INCLUDES)
 #
-dixicoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+zyte_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-dixicoin_cli_SOURCES += dixicoin-cli-res.rc
+zyte_cli_SOURCES += zyte-cli-res.rc
 endif
-dixicoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+zyte_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if BUILD_BITCOIN_LIBS
 include_HEADERS = script/bitcoinconsensus.h
